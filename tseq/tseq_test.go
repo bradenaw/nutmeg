@@ -77,10 +77,11 @@ func TestRoundtripScript(t *testing.T) {
 	})
 }
 
-func TestFail(t *testing.T) {
-	AllPermutations(t, func(tseq *TSeq) {
-		if tseq.Choose(40000) == 31231 {
-			t.FailNow()
-		}
-	})
-}
+// To test the flags manually.
+// func TestFail(t *testing.T) {
+// 	AllPermutations(t, func(tseq *TSeq) {
+// 		if tseq.Choose(40000) == 31231 {
+// 			t.FailNow()
+// 		}
+// 	})
+// }
