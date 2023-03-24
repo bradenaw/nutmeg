@@ -8,6 +8,7 @@ import (
 	"flag"
 	"regexp"
 	"testing"
+	"time"
 )
 
 var flagScript string
@@ -30,12 +31,21 @@ func AllPermutations(t *testing.T, f func(tseq *TSeq)) {
 		return
 	}
 
+	lastReport := time.Now()
+	i := 0
 	for {
 		runOne(t, tseq, f)
 		if !tseq.next() {
 			break
 		}
+
+		i++
+		if time.Since(lastReport) > time.Second {
+			t.Logf("ran %d permutations", i)
+			lastReport = time.Now()
+		}
 	}
+	t.Logf("ran %d permutations", i)
 }
 
 func runOne(t *testing.T, tseq *TSeq, f func(tseq *TSeq)) {
@@ -54,6 +64,10 @@ func runOne(t *testing.T, tseq *TSeq, f func(tseq *TSeq)) {
 	}()
 
 	f(tseq)
+
+	if tseq.i < len(tseq.script) {
+		t.Fatalf("this test is nondeterministic")
+	}
 }
 
 type TSeq struct {
