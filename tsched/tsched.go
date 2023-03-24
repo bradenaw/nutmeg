@@ -17,6 +17,15 @@ type TSched struct {
 	waiters    map[uint64]chan struct{}
 }
 
+func New() *TSched {
+	tsched := &TSched{
+		spawnIdxs: make(map[uint64]int),
+		waiters:   make(map[uint64]chan struct{}),
+	}
+	tsched.c = sync.NewCond(&tsched.m)
+	return tsched
+}
+
 func (tsched *TSched) Yield() {
 	tsched.m.Lock()
 	wait := make(chan struct{})
@@ -25,9 +34,7 @@ func (tsched *TSched) Yield() {
 	<-wait
 }
 
-func (tsched *TSched) Spawn(f func()) {
-	tsched.Yield()
-
+func (tsched *TSched) Go(f func()) {
 	tsched.m.Lock()
 	spawnIdx := tsched.n
 	tsched.n++
@@ -35,10 +42,12 @@ func (tsched *TSched) Spawn(f func()) {
 
 	go func() {
 		gid := getGID()
+
 		tsched.m.Lock()
 		tsched.spawnIdxs[gid] = spawnIdx
 		tsched.bySpawnIdx = nil
 		tsched.m.Unlock()
+
 		tsched.Yield()
 
 		f()
@@ -51,7 +60,18 @@ func (tsched *TSched) Spawn(f func()) {
 	}()
 }
 
-func (tsched *TSched) WaitForAll() {
+func (tsched *TSched) Run(choose func(n int) int) {
+	for {
+		tsched.waitForAll()
+		n := tsched.n
+		if n == 0 {
+			break
+		}
+		tsched.wake(choose(n))
+	}
+}
+
+func (tsched *TSched) waitForAll() {
 	tsched.m.Lock()
 	for tsched.n != len(tsched.waiters) {
 		tsched.c.Wait()
@@ -59,13 +79,7 @@ func (tsched *TSched) WaitForAll() {
 	tsched.m.Unlock()
 }
 
-func (tsched *TSched) N() int {
-	tsched.m.Lock()
-	defer tsched.m.Unlock()
-	return tsched.n
-}
-
-func (tsched *TSched) Wake(idx int) {
+func (tsched *TSched) wake(idx int) {
 	tsched.m.Lock()
 	if len(tsched.bySpawnIdx) == 0 {
 		tsched.bySpawnIdx = make([]uint64, 0, len(tsched.spawnIdxs))
@@ -80,17 +94,6 @@ func (tsched *TSched) Wake(idx int) {
 	close(tsched.waiters[wakeGID])
 	delete(tsched.waiters, wakeGID)
 	tsched.m.Unlock()
-}
-
-func Run(tsched *TSched, choose func(n int) int) {
-	for {
-		tsched.WaitForAll()
-		n := tsched.N()
-		if n == 0 {
-			break
-		}
-		tsched.Wake(choose(n))
-	}
 }
 
 func getGID() uint64 {
