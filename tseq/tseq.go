@@ -64,6 +64,10 @@ func runOne(t *testing.T, tseq *TSeq, f func(tseq *TSeq)) {
 	}()
 
 	f(tseq)
+
+	if tseq.i < len(tseq.script) {
+		t.Fatalf("it looks like this test is not deterministic")
+	}
 }
 
 type TSeq struct {
