@@ -4,7 +4,9 @@
 package tseq
 
 import (
+	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"flag"
 	"regexp"
 	"testing"
@@ -117,15 +119,16 @@ func trimTrailing(script []bool, b bool) []bool {
 }
 
 func scriptToString(script []bool) string {
-	// Safe to trim trailing falses because that's what tseq will choose anyway.
-	script = trimTrailing(script, false)
+	var buf [binary.MaxVarintLen64]byte
+	n := binary.PutUvarint(buf[:], uint64(len(script)))
+
 	b := make([]byte, (len(script)+7)/8)
 	for i := range script {
 		if script[i] {
 			b[i/8] |= 1 << (i % 8)
 		}
 	}
-	return hex.EncodeToString(b)
+	return hex.EncodeToString(append(buf[:n], b...))
 }
 
 func scriptFromString(s string) ([]bool, error) {
@@ -133,11 +136,14 @@ func scriptFromString(s string) ([]bool, error) {
 	if err != nil {
 		return nil, err
 	}
-	script := make([]bool, len(b)*8)
+	l, n := binary.Uvarint(b)
+	if n <= 0 {
+		return nil, errors.New("invalid length")
+	}
+	b = b[n:]
+	script := make([]bool, l)
 	for i := range script {
 		script[i] = ((b[i/8] >> (i % 8)) & 1) == 1
 	}
-	// Safe to trim trailing falses because that's what tseq will choose anyway.
-	script = trimTrailing(script, false)
 	return script, nil
 }

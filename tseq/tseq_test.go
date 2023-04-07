@@ -68,7 +68,9 @@ func TestRoundtripScript(t *testing.T) {
 
 	check([]bool{})
 	check([]bool{true})
+	check([]bool{false})
 	check([]bool{false, true})
+	check([]bool{false, true, false})
 	check([]bool{
 		true, true, false, false, true, true, false, false,
 		true, false, true, false, true, false, true, false,
@@ -78,10 +80,10 @@ func TestRoundtripScript(t *testing.T) {
 }
 
 // To test the flags manually.
-// func TestFail(t *testing.T) {
-// 	AllPermutations(t, func(tseq *TSeq) {
-// 		if tseq.Choose(40000) == 31231 {
-// 			t.FailNow()
-// 		}
-// 	})
-// }
+func TestFail(t *testing.T) {
+	AllPermutations(t, func(tseq *TSeq) {
+		if tseq.Choose(40000) == 31231 {
+			t.FailNow()
+		}
+	})
+}
