@@ -81,6 +81,7 @@ func TestRoundtripScript(t *testing.T) {
 
 // To test the flags manually.
 func TestFail(t *testing.T) {
+	t.Skip("fails intentionally")
 	AllPermutations(t, func(tseq *TSeq) {
 		if tseq.Choose(40000) == 31231 {
 			t.FailNow()
